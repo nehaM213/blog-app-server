@@ -8,10 +8,31 @@ exports.signup = async (req, res) => {
     try {
         const { email, password } = req.body;
         const profileImage = req.file;
-        if (!email || !password || !profileImage) {
-            console.log('Missing fields:', { email, password, profileImage });
-            return res.status(400).json({ message: 'All fields are required' });
+        if (!email || !password) {
+            console.log('Missing fields:', { email, password });
+            return res.status(400).json({ message: 'email or password missing!' });
         }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Invalid email format' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }
+
+        const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif'];
+        const ext = path.extname(profileImage.originalname).toLowerCase();
+        if (!allowedTypes.includes(ext)) {
+            return res.status(400).json({ message: 'Only JPG, JPEG, PNG, and GIF images are allowed' });
+        }
+
+        const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+        if (profileImage.size > MAX_SIZE) {
+            return res.status(400).json({ message: 'Image must be less than 2MB' });
+        }
+
 
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ message: 'User already exists' });
@@ -41,10 +62,10 @@ exports.login = async (req, res) => {
         if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
 
         const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!user) return res.status(400).json({ message: 'Email is not registered!' });
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!isMatch) return res.status(400).json({ message: 'Wrong password' });
 
         const token = jwt.sign(
             { userId: user._id, email: user.email },

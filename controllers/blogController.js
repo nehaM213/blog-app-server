@@ -7,8 +7,27 @@ exports.createBlog = async (req, res) => {
         const { title, description } = req.body;
         const userId = req.user.userId;
         const image = req.file;
-        if (!title || !description || !image) {
-            return res.status(400).json({ message: 'All fields are required' });
+        if (!title || !description) {
+            return res.status(400).json({ message: 'title or desscription missing!' });
+        }
+
+        if (title.trim().length < 3) {
+            return res.status(400).json({ message: 'Title must be atleast 3 characters' });
+        }
+
+        if (description.trim().length < 10) {
+            return res.status(400).json({ message: 'Description must be atleast 10 characters' });
+        }
+
+        const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif'];
+        const ext = path.extname(image.originalname).toLowerCase();
+        if (!allowedTypes.includes(ext)) {
+            return res.status(400).json({ message: 'Only JPEG, JPG, PNG, and GIF image types are allowed.' });
+        }
+
+        const MAX_SIZE = 2 * 1024 * 1024;
+        if (image.size > MAX_SIZE) {
+            return res.status(400).json({ message: 'Image must be less than 2MB' });
         }
 
         const blog = new Blog({
@@ -30,7 +49,12 @@ exports.createBlog = async (req, res) => {
 
 exports.getBlogs = async (req, res) => {
     try {
-        const blogs = await Blog.find().populate('createdBy', 'email').sort({ createdAt: -1 });
+        console.log(req.user);
+        const userId = req.user.userId;
+        const blogs = await Blog.find({ createdBy: userId }).populate('createdBy', 'email').sort({ createdAt: -1 });
+        if (!blogs || blogs.length === 0) {
+            return res.status(404).json({ message: 'No blogs found' });
+        }
         res.json(blogs);
     } catch (error) {
         console.error(error);
@@ -56,8 +80,29 @@ exports.updateBlog = async (req, res) => {
         const blogId = req.params.id;
         const userId = req.user.userId;
         const image = req.file;
-        if (!title && !description && !image) {
-            return res.status(400).json({ message: 'At least one field is required' });
+        if (!title && !description) {
+            return res.status(400).json({ message: 'title or desscription missing!' });
+        }
+
+        if (title && title.trim().length < 3) {
+            return res.status(400).json({ message: 'Title must be atleast 3 characters' });
+        }
+
+        if (description && description.trim().length < 10) {
+            return res.status(400).json({ message: 'Description must be atleast 10 characters long' });
+        }
+
+        if (image) {
+            const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif'];
+            const ext = path.extname(image.originalname).toLowerCase();
+            if (!allowedTypes.includes(ext)) {
+                return res.status(400).json({ message: 'Only JPG, PNG, and GIF files are allowed' });
+            }
+
+            const MAX_SIZE = 2 * 1024 * 1024;
+            if (image.size > MAX_SIZE) {
+                return res.status(400).json({ message: 'Image must be less than 2MB' });
+            }
         }
 
         const blog = await Blog.findById(blogId);

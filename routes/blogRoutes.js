@@ -12,7 +12,7 @@ const {
 const upload = require('../middleware/upload');
 
 router.post('/', authMiddleware, upload.single('image'), createBlog);
-router.get('/', getBlogs);
+router.get('/', authMiddleware, getBlogs);
 router.get('/feed', getFeeds);
 router.get('/:id', getBlogById);
 router.put('/:id', authMiddleware, upload.single('image'), updateBlog);
